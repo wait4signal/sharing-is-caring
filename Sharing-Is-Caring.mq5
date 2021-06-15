@@ -45,6 +45,7 @@ input bool     ALERT_MULTIPLE_LOSERS_CLOSE = true;
 //input bool     COPY_SL=true;
 //input bool     COPY_TP=true;
 input bool     REMOTE_HTTP_DOWNLOAD = false;
+input group          "Remote Copy"
 input string   REMOTE_FILE_URL = "";
 input string   REMOTE_USERNAME = "";
 input string   REMOTE_PASSWORD = "";
@@ -67,6 +68,7 @@ double prAccountEquity;
 string prAccountCurrency;
 int prAccountLeverage;
 int prMarginMode;
+long prTradeServerGMTOffset;
 
 struct PositionData {
     int seq;
@@ -184,6 +186,7 @@ void resetValues() {
    prAccountCurrency = "";
    prAccountLeverage = 0;
    prMarginMode = 0;
+   prTradeServerGMTOffset = 0;
 
    ArrayResize(prRecords,0);
    ArrayResize(recPositions,0);
@@ -259,8 +262,9 @@ bool updatePositions() {
             continue;
          }
          
-         long now = (long) TimeLocal() * 1000;
-         ulong millisecondsElapsed = now - prRecord.positionOpenTime;
+         long now = ((long)TimeGMT()) * 1000;
+         long positionTimeGMT = prRecord.positionOpenTime + (prTradeServerGMTOffset*1000);
+         long millisecondsElapsed = now - positionTimeGMT;
          if(millisecondsElapsed > (EXCLUDE_OLDER_THAN_MINUTES*60*1000)) {
             continue;
          }
@@ -361,7 +365,7 @@ bool readPositions() {
    FileReadString(positionsFileHandle);//Discard the header line as we don't use it
    
    string accountDataLine = FileReadString(positionsFileHandle);
-   string accountDataArray[9];
+   string accountDataArray[10];
    StringSplit(accountDataLine,',',accountDataArray);
    prRecordCount = accountDataArray[0]; 
    prTimeLocal = accountDataArray[1]; 
@@ -372,6 +376,7 @@ bool readPositions() {
    prAccountCurrency = accountDataArray[6];
    prAccountLeverage = accountDataArray[7];
    prMarginMode = accountDataArray[8];
+   prTradeServerGMTOffset = accountDataArray[9];
    
    FileReadString(positionsFileHandle);//Discard the header line as we don't use it
    
@@ -424,6 +429,7 @@ bool writePositions() {
    int margingMode = AccountInfoInteger(ACCOUNT_MARGIN_MODE);
    string nTimeLocal = TimeToString(TimeLocal(),TIME_DATE|TIME_SECONDS);
    string nTimeGMT = TimeToString(TimeGMT(),TIME_DATE|TIME_SECONDS);
+   long tradeServerGMTOffset = TimeGMT() - TimeTradeServer();
    
    int positionsFileHandle = INVALID_HANDLE;
    int timeWasted = 0;
@@ -443,8 +449,8 @@ bool writePositions() {
       }
    }
 
-   FileWrite(positionsFileHandle, "RecordCount", "TimeLocal", "TimeGMT", "AccountNumber", "Balance", "Equity", "Currency", "Leverage", "MarginMode");
-   FileWrite(positionsFileHandle, posTotal ,nTimeLocal, nTimeGMT, accountNumber, accountBalance, accountEquity, accountCurrency, accountLeverage, margingMode);
+   FileWrite(positionsFileHandle, "RecordCount", "TimeLocal", "TimeGMT", "AccountNumber", "Balance", "Equity", "Currency", "Leverage", "MarginMode","TradeServer GMT Offset");
+   FileWrite(positionsFileHandle, posTotal ,nTimeLocal, nTimeGMT, accountNumber, accountBalance, accountEquity, accountCurrency, accountLeverage, margingMode, tradeServerGMTOffset);
    FileWrite(positionsFileHandle,"Seq","PositionTicket","PositionOpenTime",
              "PositionType", "PositionVolume", "PositionPriceOpen","PositionSL","PositionTP",
              "PositionProfit", "PositionSymbol", "PositionComment");
