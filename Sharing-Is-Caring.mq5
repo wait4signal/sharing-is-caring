@@ -210,6 +210,13 @@ bool updatePositions() {
          printHelper(LOG_DEBUG, StringFormat("Found instrument match from [%s] to [%s]", prRecord.positionSymbol, positionSymbol));
       }
       
+      //Print error and skip if symbol does not exist
+      bool is_custom=false;
+      if(!SymbolExist(positionSymbol,is_custom)) {
+         printHelper(LOG_ERROR, StringFormat("Can't copy trade %d as symbol %s does not exist...try setting an INSTRUMENT_MATCH config", prRecord.positionTicket, positionSymbol));
+         continue;
+      }
+      
       m_trade.SetTypeFillingBySymbol(positionSymbol);
       
       //Skip if in excluded ticket list
