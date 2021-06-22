@@ -83,6 +83,7 @@ struct PositionData {
     double positionProfit;
     string positionSymbol;
     string positionComment;
+    int positionLeverage;
 };
 
 PositionData prRecords[];
@@ -228,7 +229,7 @@ bool updatePositions() {
       PositionData recPosition;
       int recPositionsSize = ArraySize(recPositions);
       for(int i=0; i<recPositionsSize; i++){
-         if(StringFind(recPositions[i].positionComment,"TKT="+prRecord.positionTicket) != -1) { //-1 means no match
+         if((GlobalVariableGet("VOL-"+recPositions[i].positionTicket+"-"+prRecord.positionTicket) != 0) || (StringFind(recPositions[i].positionComment,"TKT="+prRecord.positionTicket) != -1)) { //-1 means no match
             exists = true;
             recPosition = recPositions[i];
             break;
@@ -240,10 +241,13 @@ bool updatePositions() {
             m_trade.PositionModify(recPosition.positionTicket,prRecord.positionSL,prRecord.positionTP);
          }
          //Handle partial close or add(if vol increases then it must be netting account because hedge would be a new deal)
-         int volStartPos = StringFind(recPosition.positionComment,"VOL=") + 4;
-         int volEndPos = StringFind(recPosition.positionComment,"]");
-         double prCurrentVol = StringSubstr(recPosition.positionComment,volStartPos,(volEndPos-volStartPos));
-         printHelper(LOG_DEBUG, StringFormat("Current pr volume read starts at %d and ends at %d, value is %d", volStartPos, volEndPos, prCurrentVol));
+         double prCurrentVol = GlobalVariableGet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket); //First try using previous partial close balance if exists
+         if(prCurrentVol == 0) {
+            int volStartPos = StringFind(recPosition.positionComment,"VOL=") + 4;
+            int volEndPos = StringFind(recPosition.positionComment,"]");
+            prCurrentVol = StringSubstr(recPosition.positionComment,volStartPos,(volEndPos-volStartPos));
+            printHelper(LOG_DEBUG, StringFormat("Current pr volume read starts at %d and ends at %d, value is %d", volStartPos, volEndPos, prCurrentVol));
+         }
          double prVolDifference = MathAbs(prRecord.positionVolume - prCurrentVol);
          double volRatio = prVolDifference/prCurrentVol;
          double recVolDifference = recPosition.positionVolume * volRatio;
@@ -259,7 +263,8 @@ bool updatePositions() {
                placeSellOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
             } else if(ACCOUNT_MARGIN_MODE_RETAIL_HEDGING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
                m_trade.PositionClosePartial(recPosition.positionTicket,recVolDifference);
-               //TODO: how to handle more than 1 partial close since we can't update comments with decreased volume...bug is we will keep using original vol to get difference
+               //Save new provider volume so we can use to handle more than 1 partial close since we can't update comments with decreased volume...plus MT5 clears comments anyway so we need global var to check if ticket existed
+               GlobalVariableSet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket, prRecord.positionVolume);
             }
          }
       } else {
@@ -283,9 +288,15 @@ bool updatePositions() {
             double receiverAvailableFunds = balance - (balance*MIN_AVALABLE_FUNDS_PERC);
             volume = volume * (receiverAvailableFunds/prAccountBalance);
          }
+         
          //Check leverage
+         double marginInit;
+         double marginMaint;
+         SymbolInfoMarginRate(positionSymbol,(prRecord.positionType == 0 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),marginInit,marginMaint);
+         int positionLeverage = 1/(NormalizeDouble(marginInit,3));
          double receiverLeverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
-         volume = volume * (receiverLeverage/prAccountLeverage);
+         
+         volume = volume * ((receiverLeverage*positionLeverage)/(prAccountLeverage*prRecord.positionLeverage));
          
          string comment = "[TKT="+prRecord.positionTicket+",VOL="+DoubleToString(prRecord.positionVolume,2)+"]";
          
@@ -319,6 +330,9 @@ bool closePositions() {
       int prRecordsSize = ArraySize(prRecords);
       for(int i=0; i<prRecordsSize; i++){
          if(StringFind(recPosition.positionComment,"TKT="+prRecords[i].positionTicket) != -1) { //-1 means no match
+            existsOnProvider = true;
+            break;
+         } else if(GlobalVariableCheck("VOL-"+recPosition.positionTicket+"-"+prRecords[i].positionTicket)) {
             existsOnProvider = true;
             break;
          }
@@ -393,11 +407,10 @@ bool readPositions() {
    while(!FileIsEnding(positionsFileHandle)){
       string line = FileReadString(positionsFileHandle);
       //TODO: split string and add struct into array
-      string tmpArray[11];
+      string tmpArray[12];
       StringSplit(line, ',', tmpArray);
       
       PositionData prData;
-      //"Seq","PositionTicket","PositionOpenTime", "PositionType", "PositionVolume", "PositionPriceOpen","PositionSL","PositionTP", "PositionProfit", "PositionSymbol", "PositionComment"
       prData.seq = tmpArray[0];
       prData.positionMagic = 0;
       prData.positionTicket = tmpArray[1];
@@ -410,6 +423,7 @@ bool readPositions() {
       prData.positionProfit = tmpArray[8];
       prData.positionSymbol = tmpArray[9];
       prData.positionComment = tmpArray[10];
+      prData.positionLeverage = tmpArray[11];
       
       prRecords[i] = prData;
       
@@ -460,7 +474,7 @@ bool writePositions() {
    FileWrite(positionsFileHandle, posTotal ,nTimeLocal, nTimeGMT, accountNumber, accountBalance, accountEquity, accountCurrency, accountLeverage, margingMode, tradeServerGMTOffset);
    FileWrite(positionsFileHandle,"Seq","PositionTicket","PositionOpenTime",
              "PositionType", "PositionVolume", "PositionPriceOpen","PositionSL","PositionTP",
-             "PositionProfit", "PositionSymbol", "PositionComment");
+             "PositionProfit", "PositionSymbol", "PositionComment", "PositionLeverage");
 
    for(uint i=0; i<posTotal; i++) {
       //--- return order ticket by its position in the list
@@ -476,7 +490,13 @@ bool writePositions() {
          double positionProfit=PositionGetDouble(POSITION_PROFIT);
          string positionSymbol = PositionGetString(POSITION_SYMBOL);
          string positionComment = PositionGetString(POSITION_COMMENT);
-         FileWrite(positionsFileHandle, i, positionTicket,positionOpenTime,positionType, positionVolume, positionPriceOpen,positionSL,positionTP, positionProfit, positionSymbol, positionComment);
+         
+         double marginInit;
+         double marginMaint;
+         SymbolInfoMarginRate(positionSymbol,(positionType == 0 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),marginInit,marginMaint);
+         int positionLeverage = 1/(NormalizeDouble(marginInit,3));
+         
+         FileWrite(positionsFileHandle, i, positionTicket,positionOpenTime,positionType, positionVolume, positionPriceOpen,positionSL,positionTP, positionProfit, positionSymbol, positionComment, positionLeverage);
       }
    }
    
