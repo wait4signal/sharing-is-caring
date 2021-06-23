@@ -256,11 +256,19 @@ bool updatePositions() {
          string comment = "[TKT="+prRecord.positionTicket+",VOL="+DoubleToString(prRecord.positionVolume,2)+"]";
          if(prRecord.positionVolume > prCurrentVol) {//Vol size increased
             if(ACCOUNT_MARGIN_MODE_RETAIL_NETTING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
-               placeBuyOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+               if(prRecord.positionType == 0 && COPY_BUY) {
+                  placeBuyOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+               } else if(prRecord.positionType == 1 && COPY_SELL) {
+                  placeSellOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+               }
             }
          } else if(prRecord.positionVolume < prCurrentVol) {//Vols size decreased
             if(ACCOUNT_MARGIN_MODE_RETAIL_NETTING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
-               placeSellOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+               if(prRecord.positionType == 0 && COPY_BUY) {
+                  placeSellOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+               } else if(prRecord.positionType == 1 && COPY_SELL) {
+                  placeBuyOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+               }
             } else if(ACCOUNT_MARGIN_MODE_RETAIL_HEDGING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
                m_trade.PositionClosePartial(recPosition.positionTicket,recVolDifference);
                //Save new provider volume so we can use to handle more than 1 partial close since we can't update comments with decreased volume...plus MT5 clears comments anyway so we need global var to check if ticket existed
