@@ -143,6 +143,12 @@ void OnTimer() {
       int posTotal=PositionsTotal();
       for(int i= 0; i < posTotal; i++) {
          PositionGetSymbol(i);
+         
+         //Skip if in excluded ticket list
+         if(StringFind(EXCLUDE_TICKETS,"["+PositionGetInteger(POSITION_TICKET)+"]") != -1) { //-1 means no match
+            continue;
+         }
+         
          ulong positionMagic = PositionGetInteger(POSITION_MAGIC);
          if(prAccountNumber == positionMagic) {
             matchesCount++;
