@@ -30,8 +30,8 @@ The source code for this EA is released under GPL v3 and is available at https:/
 # **Getting started**
 
 ## **Installation**
-The EA can be installed using the binaries from the MT5 marketplace at the following link:
-
+The EA can be installed using the binaries from the MT5 marketplace at the following link:   
+(https://www.mql5.com/en/market/product/68484)   
 
 Altenatively you can compile the source code locally using the MT5 editor.
 
@@ -54,7 +54,8 @@ If using remote copy but don’t have an ftp server to upload to or an http serv
 ## **Monitoring**
 The copier can be set to send health checks to a monitoring server so that alerts can be sent out if no heartbeat pings are received within a set timeframe.   
 We recommend the https://healthchecks.io/ platform for this as it is open-source and supports a large number of alerting mechanisms such as email,telegram,phone call etc. Plus it offers up to 20 free monitoring licenses.   
-Note that your alert interval needs to be longer than the heartbeat interval e.g if heartbeat is set to 5 minutes then on the monitoring server you can set alerting to something like 7 minutes so that you get notified if the terminal has not sent a ping in 7 minutes.
+Note that your alert interval needs to be longer than the heartbeat interval e.g if heartbeat is set to 5 minutes then on the monitoring server you can set alerting to something like 7 minutes so that you get notified if the terminal has not sent a ping in 7 minutes.   
+**Configure the email tab under options for this to work*
 
 ## **Settings**
 See the following link for detailed explanation of the available settings:
