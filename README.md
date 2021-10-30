@@ -59,5 +59,5 @@ Note that your alert interval needs to be longer than the heartbeat interval e.g
 
 ## **Settings**
 See the following link for detailed explanation of the available settings:
-(Sharing-Is-Caring-settings.md)
+(https://github.com/wait4signal/sharing-is-caring/blob/main/Sharing-Is-Caring-settings.md)
 
