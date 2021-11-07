@@ -38,6 +38,11 @@ enum ENUM_LOT_SIZE {
    PROPORTIONAL_TO_BALANCE
 };
 
+//--- Global Variables
+/*
+LOG_LEVEL                        //Sets log level: LOG_NONE  = 0; LOG_ERROR = 1; LOG_WARN  = 2; LOG_INFO  = 3; LOG_DEBUG = 4;
+*/
+
 //--- input parameters
 input ENUM_COPY_MODE   COPY_MODE=RECEIVER;
 input int      PROCESSING_INTERVAL_MS = 500;

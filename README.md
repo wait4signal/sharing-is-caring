@@ -33,7 +33,8 @@ The source code for this EA is released under GPL v3 and is available at https:/
 The EA can be installed using the binaries from the MT5 marketplace at the following link:   
 (https://www.mql5.com/en/market/product/68484)   
 
-Altenatively you can compile the source code locally using the MT5 editor.
+Altenatively you can compile the source code locally using the MT5 editor.   
+You only need to attach the EA onto one of the charts running on the MT5 terminal, it will then process all the transactions occurring on the entire account.
 
 ## **Configuration**
 Very easy to get started, just select the preferred COPY_MODE and depending on the mode the following may apply.
@@ -56,6 +57,13 @@ The copier can be set to send health checks to a monitoring server so that alert
 We recommend the https://healthchecks.io/ platform for this as it is open-source and supports a large number of alerting mechanisms such as email,telegram,phone call etc. Plus it offers up to 20 free monitoring licenses.   
 Note that your alert interval needs to be longer than the heartbeat interval e.g if heartbeat is set to 5 minutes then on the monitoring server you can set alerting to something like 7 minutes so that you get notified if the terminal has not sent a ping in 7 minutes.   
 **Configure the email tab under options for this to work*
+
+## **Terminal global variables**
+The following global variables can be set at terminal level to control certain program behaviour:
+
+| Variable                                | Description `[valid values in brackets]`                                                                                               |
+|-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| LOG_LEVEL                               | Sets log level: `[0 \| 1 \| 2 \| 3 \| 4]` where LOG_NONE  = 0; LOG_ERROR = 1; LOG_WARN  = 2; LOG_INFO  = 3; LOG_DEBUG = 4              |
 
 ## **Settings**
 See the following link for detailed explanation of the available settings:
