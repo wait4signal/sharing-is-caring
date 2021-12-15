@@ -320,7 +320,7 @@ bool updatePositions() {
          }
          double volume = prRecord.positionVolume;
          if(PROPORTIONAL_TO_BALANCE == LOT_SIZE) {
-            double receiverAvailableFunds = balance - (balance*MIN_AVALABLE_FUNDS_PERC);
+            double receiverAvailableFunds = balance;
             volume = volume * (receiverAvailableFunds/prAccountBalance);
          }
          
