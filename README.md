@@ -50,7 +50,8 @@ This is the preferred method as it is fastest, it is used when the provider and 
 However if there are receivers running on a remote machine then the provider should be set to also write the data to a remote file location. The remote receivers would then also be set to read from this remote location.   
 By default, position data is saved locally onto a file named **/Terminal\Common\Files\Sharing-Is-Caring\[providerAccount]-positions.csv*   
 Trades from a remote location also get written to this file prior to use.   
-If using remote copy but don’t have an ftp server to upload to or an http server to download from, you can get in touch so we can create free accounts on our ftp and http servers.
+**To upload/share trades via ftp, you need to configure ftp server,path and credentials in the FTP tab under options*   
+**Conversely, remote trades are downloaded via http using the "Remote Copy" EA parameters*
 
 ## **Monitoring**
 The copier can be set to send health checks to a monitoring server so that alerts can be sent out if no heartbeat pings are received within a set timeframe.   
