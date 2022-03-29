@@ -62,9 +62,9 @@ Note that your alert interval needs to be longer than the heartbeat interval e.g
 ## **Terminal global variables**
 The following global variables can be set at terminal level to control certain program behaviour:
 
-| Variable                                | Description `[valid values in brackets]`                                                                                               |
+| Variable    `[defaults in brackets]`    | Description `[valid values in brackets]`                                                                                               |
 |-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| LOG_LEVEL                               | Sets log level: `[0 \| 1 \| 2 \| 3 \| 4]` where LOG_NONE  = 0; LOG_ERROR = 1; LOG_WARN  = 2; LOG_INFO  = 3; LOG_DEBUG = 4              |
+| LOG_LEVEL   `[0]`                       | Sets log level: `[0 \| 1 \| 2 \| 3 \| 4]` where LOG_NONE  = 0; LOG_ERROR = 1; LOG_WARN  = 2; LOG_INFO  = 3; LOG_DEBUG = 4              |
 
 ## **Settings**
 See the following link for detailed explanation of the available settings:

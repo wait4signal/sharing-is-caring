@@ -226,7 +226,7 @@ bool updatePositions() {
    m_trade.SetDeviationInPoints(PRICE_DEVIATION);
       
    int prRecordsSize = ArraySize(prRecords);
-   for(int i=0; i<prRecordsSize; i++){
+   for(int i=0; i<prRecordsSize; i++) {
       PositionData prRecord = prRecords[i];
       
       string positionSymbol = prRecord.positionSymbol;
@@ -298,10 +298,13 @@ bool updatePositions() {
                }
             } else if(ACCOUNT_MARGIN_MODE_RETAIL_HEDGING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
                m_trade.PositionClosePartial(recPosition.positionTicket,recVolDifference);
-               //Save new provider volume so we can use to handle more than 1 partial close since we can't update comments with decreased volume...plus MT5 clears comments anyway so we need global var to check if ticket existed
-               GlobalVariableSet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket, prRecord.positionVolume);
+               //Save new provider volume so we can use to handle more than 1 partial close since we can't update comments with decreased volume...plus MT5 clears comments anyway on partial close so we need global var to check if ticket existed
+               GlobalVariableSet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket, prRecord.positionVolume); //Kinda redundent no since we set global var either way below for all existing deals ( for both netting and hedging)
             }
          }
+         
+         //Set record in global var so that we still have it even if comments get removed (helps fix issue of closing which no longer have comments to get provider ticket from)
+         GlobalVariableSet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket, prRecord.positionVolume);
       } else {
          double balance = AccountInfoDouble(ACCOUNT_BALANCE);
          double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
