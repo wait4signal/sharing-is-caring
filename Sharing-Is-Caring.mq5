@@ -35,7 +35,8 @@ enum ENUM_COPY_MODE {
 
 enum ENUM_LOT_SIZE {
    SAME_AS_PROVIDER,
-   PROPORTIONAL_TO_BALANCE
+   PROPORTIONAL_TO_BALANCE,
+   PROPORTIONAL_TO_FREE_MARGIN
 };
 
 //--- Global Variables
@@ -59,6 +60,7 @@ input int      EXCLUDE_OLDER_THAN_MINUTES = 5;
 input bool     COPY_BUY = true;
 input bool     COPY_SELL = true;
 input ENUM_LOT_SIZE   LOT_SIZE = PROPORTIONAL_TO_BALANCE;
+input bool     USE_LEVERAGE_FOR_LOT_CALCULATION = true;
 input double   MIN_AVALABLE_FUNDS_PERC = 0.20;
 input string   EXCLUDE_TICKETS = "";
 input string   INSTRUMENT_MATCH = "";
@@ -325,16 +327,30 @@ bool updatePositions() {
          if(PROPORTIONAL_TO_BALANCE == LOT_SIZE) {
             double receiverAvailableFunds = balance;
             volume = volume * (receiverAvailableFunds/prAccountBalance);
+         } else if(PROPORTIONAL_TO_FREE_MARGIN == LOT_SIZE) {
+            double receiverAvailableFunds = freeMargin;
+            volume = volume * (receiverAvailableFunds/prAccountBalance);
          }
          
          //Check leverage
-         double marginInit;
-         double marginMaint;
-         SymbolInfoMarginRate(positionSymbol,(prRecord.positionType == 0 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),marginInit,marginMaint);
-         int positionLeverage = 1/(NormalizeDouble(marginInit,3));
-         double receiverLeverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
-         
-         volume = volume * ((receiverLeverage*positionLeverage)/(prAccountLeverage*prRecord.positionLeverage));
+         if(USE_LEVERAGE_FOR_LOT_CALCULATION) {
+            double marginInit;
+            double marginMaint;
+            SymbolInfoMarginRate(positionSymbol,(prRecord.positionType == 0 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),marginInit,marginMaint);
+            int positionLeverage = 1/(NormalizeDouble(marginInit,3));
+            double receiverLeverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
+            
+            //Default position leverage to 1 to avoid dividing by 0
+            double prPositionLeverage = prRecord.positionLeverage;
+            if(prPositionLeverage == 0) {
+               prPositionLeverage = 1;
+            }
+            if(positionLeverage == 0) {
+               positionLeverage = 1;
+            }
+            
+            volume = volume * ((receiverLeverage*positionLeverage)/(prAccountLeverage*prPositionLeverage));
+         }
          
          string comment = "[TKT="+prRecord.positionTicket+",VOL="+DoubleToString(prRecord.positionVolume,2)+"]";
          
