@@ -31,3 +31,6 @@
 *.out
 *.app
 *.ex5
+
+# Compiled log files
+*.log
