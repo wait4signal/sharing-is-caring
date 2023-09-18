@@ -45,33 +45,33 @@ LOG_LEVEL                        //Sets log level: LOG_NONE  = 0; LOG_ERROR = 1;
 */
 
 //--- input parameters
-input ENUM_COPY_MODE   COPY_MODE=RECEIVER;
-input int      PROCESSING_INTERVAL_MS = 500;
-input group           "Monitoring"
-input string   HEARTBEAT_URL = "";
-input int      HEARTBEAT_INTERVAL_MINUTES = 5;
-input group           "Provider"
-input bool     REMOTE_FTP_PUBLISH=false;
-input group           "Receiver"
-input ulong    PROVIDER_ACCOUNT;
-input int      PRICE_DEVIATION = 50;
-input bool     COPY_IN_PROFIT = false;
-input int      EXCLUDE_OLDER_THAN_MINUTES = 5;
-input bool     COPY_BUY = true;
-input bool     COPY_SELL = true;
-input ENUM_LOT_SIZE   LOT_SIZE = PROPORTIONAL_TO_BALANCE;
-input bool     USE_LEVERAGE_FOR_LOT_CALCULATION = true;
-input double   MIN_AVALABLE_FUNDS_PERC = 0.20;
-input string   EXCLUDE_TICKETS = "";
-input string   INSTRUMENT_MATCH = "";
-input bool     ALERT_MULTIPLE_LOSERS_CLOSE = true;
-//input bool     COPY_SL=true;
-//input bool     COPY_TP=true;
-input bool     REMOTE_HTTP_DOWNLOAD = false;
-input group          "Remote Copy"
-input string   REMOTE_FILE_URL = "";
-input string   REMOTE_USERNAME = "";
-input string   REMOTE_PASSWORD = "";
+input ENUM_COPY_MODE COPY_MODE = RECEIVER; // Operating mode
+input int PROCESSING_INTERVAL_MS = 500;    // Processing interval (ms)
+input group "Monitoring";
+input string HEARTBEAT_URL = "";            // Heart beat URL
+input ulong HEARTBEAT_INTERVAL_MINUTES = 5; // Heart beat interval (minutes)
+input group "Provider";
+input bool REMOTE_FTP_PUBLISH = false; // Publish to remote FTP
+input group "Receiver";
+input ulong PROVIDER_ACCOUNT;                           // Provider account number
+input int PRICE_DEVIATION = 50;                         // Price deviation
+input bool COPY_IN_PROFIT = false;                      // Copy trades in profit
+input ulong EXCLUDE_OLDER_THAN_MINUTES = 5;             // Exclude trades older than X minutes
+input bool COPY_BUY = true;                             // Copy buy trades
+input bool COPY_SELL = true;                            // Copy sell trades
+input ENUM_LOT_SIZE LOT_SIZE = PROPORTIONAL_TO_BALANCE; // Trade volume mode
+input bool USE_LEVERAGE_FOR_LOT_CALCULATION = true;     // Use leverage for volume calculation
+input double MIN_AVALABLE_FUNDS_PERC = 0.20;            // Minimum available funds percentage
+input string EXCLUDE_TICKETS = "";                      // Exclude tickets
+input string INSTRUMENT_MATCH = "";                     // Match instruments
+input bool ALERT_MULTIPLE_LOSERS_CLOSE = true;          // Alert email on multiple losing trades
+// input bool     COPY_SL=true;
+// input bool     COPY_TP=true;
+input group "Remote Copy";
+input bool REMOTE_HTTP_DOWNLOAD = false; // Remote HTTP download
+input string REMOTE_FILE_URL = "";       // Remote file URL
+input string REMOTE_USERNAME = "";       // Remote user name
+input string REMOTE_PASSWORD = "";       // Remote password
 
 CTrade       m_trade; 
 
