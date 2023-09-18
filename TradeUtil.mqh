@@ -103,7 +103,12 @@ void placeSellOrder(CTrade &m_trade, double sl, double tp, double lot, string sy
 }
 
 void printHelper(int level, string formattedText) {
-   int logLevel = (int)GlobalVariableGet("LOG_LEVEL");
+   // Set default log level to show errors
+   int logLevel = LOG_ERROR;
+   if (GlobalVariableCheck("LOG_LEVEL")) {
+      logLevel = (int)GlobalVariableGet("LOG_LEVEL");
+   }
+
    if(level <= logLevel) {
       Print(formattedText);
    }
