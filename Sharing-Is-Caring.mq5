@@ -28,7 +28,7 @@
 #include <Trade\AccountInfo.mqh>
 
 // Required for compiling in wine on linux
-#define _LINUX_
+// #define _LINUX_
 #ifdef _LINUX_
 #include <TradeUtil.mqh>
 #else
