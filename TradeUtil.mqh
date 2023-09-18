@@ -65,13 +65,17 @@ double getNormalizedVolume(double lot, string symbol) {
 void placeBuyOrder(CTrade &m_trade, double sl, double tp, double lot, string symbol, string comment) {
    double price = SymbolInfoDouble(symbol,SYMBOL_ASK);
 
-   sl = NormalizeDouble(sl,SymbolInfoInteger(symbol,SYMBOL_DIGITS));
+   sl = NormalizeDouble(sl, (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS));
    double volume = getNormalizedVolume(lot, symbol);
    
    //BEGIN Calc margin
    double margin = 0.00;
    ENUM_ORDER_TYPE orderType = ORDER_TYPE_BUY;
-   OrderCalcMargin(orderType, symbol,volume,price,margin);
+   ResetLastError();
+   if (!OrderCalcMargin(orderType, symbol, volume, price, margin)) {
+      printHelper(LOG_ERROR, "OrderCalcMargin error: " + IntegerToString(GetLastError()));
+      return;
+   }
    //END Calc margin
    
    printHelper(LOG_INFO, StringFormat("About to place buy order of volume %f and amount %f ", volume, margin));
@@ -81,13 +85,17 @@ void placeBuyOrder(CTrade &m_trade, double sl, double tp, double lot, string sym
 void placeSellOrder(CTrade &m_trade, double sl, double tp, double lot, string symbol, string comment) {
    double price = SymbolInfoDouble(symbol,SYMBOL_BID);
 
-   sl = NormalizeDouble(sl,SymbolInfoInteger(symbol,SYMBOL_DIGITS));
+   sl = NormalizeDouble(sl, (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS));
    double volume = getNormalizedVolume(lot, symbol);
-   
+
    //BEGIN Calc margin
    double margin = 0.00;
    ENUM_ORDER_TYPE orderType = ORDER_TYPE_SELL;
-   OrderCalcMargin(orderType, symbol,volume,price,margin);
+   ResetLastError();
+   if (!OrderCalcMargin(orderType, symbol, volume, price, margin)) {
+      printHelper(LOG_ERROR, "OrderCalcMargin error: " + IntegerToString(GetLastError()));
+      return;
+   }
    //END Calc margin
    
    printHelper(LOG_INFO, StringFormat("About to place sell order of volume %f and amount %f", volume, margin));
@@ -95,7 +103,7 @@ void placeSellOrder(CTrade &m_trade, double sl, double tp, double lot, string sy
 }
 
 void printHelper(int level, string formattedText) {
-   int logLevel = GlobalVariableGet("LOG_LEVEL");
+   int logLevel = (int)GlobalVariableGet("LOG_LEVEL");
    if(level <= logLevel) {
       Print(formattedText);
    }
