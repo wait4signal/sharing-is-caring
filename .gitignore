@@ -34,3 +34,6 @@
 
 # Compiled log files
 *.log
+
+# VS code editor settings
+.vscode
