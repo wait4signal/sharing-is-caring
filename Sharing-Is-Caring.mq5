@@ -26,7 +26,14 @@
 #include <Trade\Trade.mqh>
 #include <Trade\SymbolInfo.mqh>
 #include <Trade\AccountInfo.mqh>
+
+// Required for compiling in wine on linux
+// #define _LINUX_
+#ifdef _LINUX_
+#include <TradeUtil.mqh>
+#else
 #include "TradeUtil.mqh"
+#endif
 
 enum ENUM_COPY_MODE {
    PROVIDER, 
@@ -73,7 +80,7 @@ input string REMOTE_FILE_URL = "";       // Remote file URL
 input string REMOTE_USERNAME = "";       // Remote user name
 input string REMOTE_PASSWORD = "";       // Remote password
 
-CTrade       m_trade; 
+CTrade       sic_trade; 
 
 int FILE_RETRY_MS = 50;
 int FILE_MAXWAIT_MS = 500;
@@ -123,7 +130,7 @@ int OnInit() {
    if(RECEIVER == COPY_MODE) {
       fileAccount = PROVIDER_ACCOUNT;
    }
-   positionsFileName = "Sharing-Is-Caring\\"+fileAccount+"-positions.csv";
+   positionsFileName = "Sharing-Is-Caring\\"+ IntegerToString(fileAccount) +"-positions.csv";
    
    EventSetMillisecondTimer(PROCESSING_INTERVAL_MS);
    
@@ -168,7 +175,7 @@ void OnTimer() {
          PositionGetSymbol(i);
          
          //Skip if in excluded ticket list
-         if(StringFind(EXCLUDE_TICKETS,"["+PositionGetInteger(POSITION_TICKET)+"]") != -1) { //-1 means no match
+         if(StringFind(EXCLUDE_TICKETS,"["+ IntegerToString(PositionGetInteger(POSITION_TICKET)) +"]") != -1) { //-1 means no match
             continue;
          }
          
@@ -182,7 +189,7 @@ void OnTimer() {
             positionData.positionMagic = positionMagic;
             positionData.positionTicket = PositionGetInteger(POSITION_TICKET);
             positionData.positionOpenTime = PositionGetInteger(POSITION_TIME_MSC);
-            positionData.positionType = PositionGetInteger(POSITION_TYPE);
+            positionData.positionType = (int)PositionGetInteger(POSITION_TYPE);
             positionData.positionVolume = PositionGetDouble(POSITION_VOLUME);
             positionData.positionPriceOpen = PositionGetDouble(POSITION_PRICE_OPEN);
             positionData.positionSL = PositionGetDouble(POSITION_SL);
@@ -208,8 +215,8 @@ void OnTimer() {
 
 void resetValues() {
    prRecordCount = 0;
-   prTimeLocal = "";
-   prTimeGMT = "";
+   prTimeLocal = 0;
+   prTimeGMT = 0;
    prAccountNumber = 0;
    prAccountBalance = 0;
    prAccountEquity = 0;
@@ -223,9 +230,9 @@ void resetValues() {
 }
 
 bool updatePositions() {
-   m_trade.SetExpertMagicNumber(prAccountNumber);
-   m_trade.SetMarginMode();
-   m_trade.SetDeviationInPoints(PRICE_DEVIATION);
+   sic_trade.SetExpertMagicNumber(prAccountNumber);
+   sic_trade.SetMarginMode();
+   sic_trade.SetDeviationInPoints(PRICE_DEVIATION);
       
    int prRecordsSize = ArraySize(prRecords);
    for(int i=0; i<prRecordsSize; i++) {
@@ -247,10 +254,10 @@ bool updatePositions() {
          continue;
       }
       
-      m_trade.SetTypeFillingBySymbol(positionSymbol);
+      sic_trade.SetTypeFillingBySymbol(positionSymbol);
       
       //Skip if in excluded ticket list
-      if(StringFind(EXCLUDE_TICKETS,"["+prRecord.positionTicket+"]") != -1) { //-1 means no match
+      if(StringFind(EXCLUDE_TICKETS,"["+ IntegerToString(prRecord.positionTicket) +"]") != -1) { //-1 means no match
          continue;
       }
       
@@ -258,7 +265,7 @@ bool updatePositions() {
       PositionData recPosition;
       int recPositionsSize = ArraySize(recPositions);
       for(int i=0; i<recPositionsSize; i++){
-         if((GlobalVariableGet("VOL-"+recPositions[i].positionTicket+"-"+prRecord.positionTicket) != 0) || (StringFind(recPositions[i].positionComment,"TKT="+prRecord.positionTicket) != -1)) { //-1 means no match
+         if((GlobalVariableGet("VOL-"+ IntegerToString(recPositions[i].positionTicket) +"-"+ IntegerToString(prRecord.positionTicket)) != 0) || (StringFind(recPositions[i].positionComment,"TKT="+ IntegerToString(prRecord.positionTicket)) != -1)) { //-1 means no match
             exists = true;
             recPosition = recPositions[i];
             break;
@@ -267,14 +274,14 @@ bool updatePositions() {
       
       if(exists) {
          if(recPosition.positionSL != prRecord.positionSL || recPosition.positionTP != prRecord.positionTP) {
-            m_trade.PositionModify(recPosition.positionTicket,prRecord.positionSL,prRecord.positionTP);
+            sic_trade.PositionModify(recPosition.positionTicket,prRecord.positionSL,prRecord.positionTP);
          }
          //Handle partial close or add(if vol increases then it must be netting account because hedge would be a new deal)
-         double prCurrentVol = GlobalVariableGet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket); //First try using previous partial close balance if exists
+         double prCurrentVol = GlobalVariableGet("VOL-"+ IntegerToString(recPosition.positionTicket) +"-"+ IntegerToString(prRecord.positionTicket)); //First try using previous partial close balance if exists
          if(prCurrentVol == 0) {
             int volStartPos = StringFind(recPosition.positionComment,"VOL=") + 4;
             int volEndPos = StringFind(recPosition.positionComment,"]");
-            prCurrentVol = StringSubstr(recPosition.positionComment,volStartPos,(volEndPos-volStartPos));
+            prCurrentVol = StringToDouble(StringSubstr(recPosition.positionComment,volStartPos,(volEndPos-volStartPos)));
             printHelper(LOG_DEBUG, StringFormat("Current pr volume read starts at %d and ends at %d, value is %d", volStartPos, volEndPos, prCurrentVol));
          }
          double prVolDifference = MathAbs(prRecord.positionVolume - prCurrentVol);
@@ -282,31 +289,31 @@ bool updatePositions() {
          double recVolDifference = recPosition.positionVolume * volRatio;
          recVolDifference = getNormalizedVolume(recVolDifference,positionSymbol);
          printHelper(LOG_DEBUG, StringFormat("prVolDifference is %d, using volRatio of %d we get recVolDifference of %d", prVolDifference, volRatio, recVolDifference));
-         string comment = "[TKT="+prRecord.positionTicket+",VOL="+DoubleToString(prRecord.positionVolume,2)+"]";
+         string comment = "[TKT="+ IntegerToString(prRecord.positionTicket) +",VOL="+DoubleToString(prRecord.positionVolume,2)+"]";
          if(prRecord.positionVolume > prCurrentVol) {//Vol size increased
             if(ACCOUNT_MARGIN_MODE_RETAIL_NETTING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
                if(prRecord.positionType == 0 && COPY_BUY) {
-                  placeBuyOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+                  placeBuyOrder(sic_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
                } else if(prRecord.positionType == 1 && COPY_SELL) {
-                  placeSellOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+                  placeSellOrder(sic_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
                }
             }
          } else if(prRecord.positionVolume < prCurrentVol) {//Vols size decreased
             if(ACCOUNT_MARGIN_MODE_RETAIL_NETTING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
                if(prRecord.positionType == 0 && COPY_BUY) {
-                  placeSellOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+                  placeSellOrder(sic_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
                } else if(prRecord.positionType == 1 && COPY_SELL) {
-                  placeBuyOrder(m_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
+                  placeBuyOrder(sic_trade, prRecord.positionSL, prRecord.positionTP, recVolDifference, positionSymbol, comment);
                }
             } else if(ACCOUNT_MARGIN_MODE_RETAIL_HEDGING == AccountInfoInteger(ACCOUNT_MARGIN_MODE)) {
-               m_trade.PositionClosePartial(recPosition.positionTicket,recVolDifference);
+               sic_trade.PositionClosePartial(recPosition.positionTicket,recVolDifference);
                //Save new provider volume so we can use to handle more than 1 partial close since we can't update comments with decreased volume...plus MT5 clears comments anyway on partial close so we need global var to check if ticket existed
-               GlobalVariableSet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket, prRecord.positionVolume); //Kinda redundent no since we set global var either way below for all existing deals ( for both netting and hedging)
+               GlobalVariableSet("VOL-"+ IntegerToString(recPosition.positionTicket) +"-"+ IntegerToString(prRecord.positionTicket), prRecord.positionVolume); //Kinda redundent no since we set global var either way below for all existing deals ( for both netting and hedging)
             }
          }
          
          //Set record in global var so that we still have it even if comments get removed (helps fix issue of closing which no longer have comments to get provider ticket from)
-         GlobalVariableSet("VOL-"+recPosition.positionTicket+"-"+prRecord.positionTicket, prRecord.positionVolume);
+         GlobalVariableSet("VOL-"+ IntegerToString(recPosition.positionTicket) +"-"+ IntegerToString(prRecord.positionTicket), prRecord.positionVolume);
       } else {
          double balance = AccountInfoDouble(ACCOUNT_BALANCE);
          double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
@@ -315,8 +322,8 @@ bool updatePositions() {
          }
          
          long now = ((long)TimeGMT()) * 1000;
-         long positionTimeGMT = prRecord.positionOpenTime + (prTradeServerGMTOffset*1000);
-         long millisecondsElapsed = now - positionTimeGMT;
+         ulong positionTimeGMT = prRecord.positionOpenTime + (prTradeServerGMTOffset*1000);
+         ulong millisecondsElapsed = now - positionTimeGMT;
          if(millisecondsElapsed > (EXCLUDE_OLDER_THAN_MINUTES*60*1000)) {
             continue;
          }
@@ -337,8 +344,8 @@ bool updatePositions() {
             double marginInit;
             double marginMaint;
             SymbolInfoMarginRate(positionSymbol,(prRecord.positionType == 0 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),marginInit,marginMaint);
-            int positionLeverage = 1/(NormalizeDouble(marginInit,3));
-            double receiverLeverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
+            double positionLeverage = 1/(NormalizeDouble(marginInit,3));
+            long receiverLeverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
             
             //Default position leverage to 1 to avoid dividing by 0
             double prPositionLeverage = prRecord.positionLeverage;
@@ -352,12 +359,12 @@ bool updatePositions() {
             volume = volume * ((receiverLeverage*positionLeverage)/(prAccountLeverage*prPositionLeverage));
          }
          
-         string comment = "[TKT="+prRecord.positionTicket+",VOL="+DoubleToString(prRecord.positionVolume,2)+"]";
+         string comment = "[TKT="+ IntegerToString(prRecord.positionTicket) +",VOL="+DoubleToString(prRecord.positionVolume,2)+"]";
          
          if(prRecord.positionType == 0 && COPY_BUY) {
-            placeBuyOrder(m_trade, prRecord.positionSL, prRecord.positionTP, volume, positionSymbol, comment);
+            placeBuyOrder(sic_trade, prRecord.positionSL, prRecord.positionTP, volume, positionSymbol, comment);
          } else if(prRecord.positionType == 1 && COPY_SELL) {
-            placeSellOrder(m_trade, prRecord.positionSL, prRecord.positionTP, volume, positionSymbol, comment);
+            placeSellOrder(sic_trade, prRecord.positionSL, prRecord.positionTP, volume, positionSymbol, comment);
          }
       }
    }
@@ -366,9 +373,9 @@ bool updatePositions() {
 }
 
 bool closePositions() {
-   m_trade.SetExpertMagicNumber(prAccountNumber);
-   m_trade.SetMarginMode();
-   m_trade.SetDeviationInPoints(PRICE_DEVIATION);
+   sic_trade.SetExpertMagicNumber(prAccountNumber);
+   sic_trade.SetMarginMode();
+   sic_trade.SetDeviationInPoints(PRICE_DEVIATION);
    
    PositionData losersToClose[];
    int loserMatches = 0;
@@ -377,16 +384,16 @@ bool closePositions() {
    for(int i=0; i<recPositionsSize; i++){
       PositionData recPosition = recPositions[i];
       
-      m_trade.SetTypeFillingBySymbol(recPosition.positionSymbol);
+      sic_trade.SetTypeFillingBySymbol(recPosition.positionSymbol);
       
       //Close position no longer on provider side
       bool existsOnProvider = false;
       int prRecordsSize = ArraySize(prRecords);
       for(int i=0; i<prRecordsSize; i++){
-         if(StringFind(recPosition.positionComment,"TKT="+prRecords[i].positionTicket) != -1) { //-1 means no match
+         if(StringFind(recPosition.positionComment,"TKT="+ IntegerToString(prRecords[i].positionTicket)) != -1) { //-1 means no match
             existsOnProvider = true;
             break;
-         } else if(GlobalVariableCheck("VOL-"+recPosition.positionTicket+"-"+prRecords[i].positionTicket)) {
+         } else if(GlobalVariableCheck("VOL-"+ IntegerToString(recPosition.positionTicket) +"-"+ IntegerToString(prRecords[i].positionTicket))) {
             existsOnProvider = true;
             break;
          }
@@ -399,22 +406,22 @@ bool closePositions() {
             continue;
          }
          printHelper(LOG_INFO, StringFormat("Closing position %d as it no longer exists on provider side", recPosition.positionTicket));
-         m_trade.PositionClose(recPosition.positionTicket);
+         sic_trade.PositionClose(recPosition.positionTicket);
       }
    }
    
    if(loserMatches > 1 && ALERT_MULTIPLE_LOSERS_CLOSE) { //Alert and don't close positions
       string tickets = "";
       for(int i=0; i<loserMatches; i++) {
-         tickets = tickets+"["+losersToClose[i].positionTicket+"]";
+         tickets = tickets+"["+ IntegerToString(losersToClose[i].positionTicket) +"]";
       }
-      string subject = "Closing of Multiple losers on receiver account "+AccountInfoInteger(ACCOUNT_LOGIN);
+      string subject = "Closing of Multiple losers on receiver account "+ IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN));
       string body = StringFormat("Closing of multiple losing tickets %s looks suspicious. Please check and close them manually if still applicable", tickets);
       SendMail(subject,body);
    } else if(loserMatches > 0) {
       for(int i=0; i<loserMatches; i++) {
          printHelper(LOG_INFO, StringFormat("Closing position %d as it no longer exists on provider side", losersToClose[i].positionTicket));
-         m_trade.PositionClose(losersToClose[i].positionTicket);
+         sic_trade.PositionClose(losersToClose[i].positionTicket);
       }
    }
    
@@ -442,16 +449,16 @@ bool readPositions() {
    string accountDataLine = FileReadString(positionsFileHandle);
    string accountDataArray[10];
    StringSplit(accountDataLine,',',accountDataArray);
-   prRecordCount = accountDataArray[0]; 
-   prTimeLocal = accountDataArray[1]; 
-   prTimeGMT = accountDataArray[2]; 
-   prAccountNumber = accountDataArray[3]; 
-   prAccountBalance = accountDataArray[4]; 
-   prAccountEquity = accountDataArray[5]; 
+   prRecordCount = (int)StringToInteger(accountDataArray[0]); 
+   prTimeLocal = (datetime)StringToInteger(accountDataArray[1]); 
+   prTimeGMT = (datetime)StringToInteger(accountDataArray[2]); 
+   prAccountNumber = StringToInteger(accountDataArray[3]); 
+   prAccountBalance = StringToDouble(accountDataArray[4]); 
+   prAccountEquity = StringToDouble(accountDataArray[5]); 
    prAccountCurrency = accountDataArray[6];
-   prAccountLeverage = accountDataArray[7];
-   prMarginMode = accountDataArray[8];
-   prTradeServerGMTOffset = accountDataArray[9];
+   prAccountLeverage = (int)StringToInteger(accountDataArray[7]);
+   prMarginMode = (int)StringToInteger(accountDataArray[8]);
+   prTradeServerGMTOffset = StringToInteger(accountDataArray[9]);
    
    FileReadString(positionsFileHandle);//Discard the header line as we don't use it
    
@@ -465,19 +472,19 @@ bool readPositions() {
       StringSplit(line, ',', tmpArray);
       
       PositionData prData;
-      prData.seq = tmpArray[0];
+      prData.seq = (int)StringToInteger(tmpArray[0]);
       prData.positionMagic = 0;
-      prData.positionTicket = tmpArray[1];
-      prData.positionOpenTime = tmpArray[2];
-      prData.positionType = tmpArray[3];
-      prData.positionVolume = tmpArray[4];
-      prData.positionPriceOpen = tmpArray[5];
-      prData.positionSL = tmpArray[6];
-      prData.positionTP = tmpArray[7];
-      prData.positionProfit = tmpArray[8];
+      prData.positionTicket = StringToInteger(tmpArray[1]);
+      prData.positionOpenTime = StringToInteger(tmpArray[2]);
+      prData.positionType = (int)StringToInteger(tmpArray[3]);
+      prData.positionVolume = StringToDouble(tmpArray[4]);
+      prData.positionPriceOpen = StringToDouble(tmpArray[5]);
+      prData.positionSL = StringToDouble(tmpArray[6]);
+      prData.positionTP = StringToDouble(tmpArray[7]);
+      prData.positionProfit = StringToDouble(tmpArray[8]);
       prData.positionSymbol = tmpArray[9];
       prData.positionComment = tmpArray[10];
-      prData.positionLeverage = tmpArray[11];
+      prData.positionLeverage = (int)StringToInteger(tmpArray[11]);
       
       prRecords[i] = prData;
       
@@ -500,8 +507,8 @@ bool writePositions() {
    string accountCurrency =AccountInfoString(ACCOUNT_CURRENCY);
    double accountBalance =AccountInfoDouble(ACCOUNT_BALANCE);
    double accountEquity =AccountInfoDouble(ACCOUNT_EQUITY);
-   int accountLeverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
-   int margingMode = AccountInfoInteger(ACCOUNT_MARGIN_MODE);
+   int accountLeverage = (int)AccountInfoInteger(ACCOUNT_LEVERAGE);
+   int margingMode = (int)AccountInfoInteger(ACCOUNT_MARGIN_MODE);
    string nTimeLocal = TimeToString(TimeLocal(),TIME_DATE|TIME_SECONDS);
    string nTimeGMT = TimeToString(TimeGMT(),TIME_DATE|TIME_SECONDS);
    long tradeServerGMTOffset = TimeGMT() - TimeTradeServer();
@@ -536,7 +543,7 @@ bool writePositions() {
       if(positionTicket>0) {//Meaning the position exists,
          //--- Loading Position Information
          ulong positionOpenTime = PositionGetInteger(POSITION_TIME_MSC);
-         int positionType=PositionGetInteger(POSITION_TYPE);    // type of the position
+         int positionType= (int)PositionGetInteger(POSITION_TYPE);    // type of the position
          double positionVolume=PositionGetDouble(POSITION_VOLUME);
          double positionPriceOpen=PositionGetDouble(POSITION_PRICE_OPEN);
          double positionSL = PositionGetDouble(POSITION_SL);
@@ -548,7 +555,7 @@ bool writePositions() {
          double marginInit;
          double marginMaint;
          SymbolInfoMarginRate(positionSymbol,(positionType == 0 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),marginInit,marginMaint);
-         int positionLeverage = 1/(NormalizeDouble(marginInit,3));
+         double positionLeverage = 1/(NormalizeDouble(marginInit,3));
          
          FileWrite(positionsFileHandle, i, positionTicket,positionOpenTime,positionType, positionVolume, positionPriceOpen,positionSL,positionTP, positionProfit, positionSymbol, positionComment, positionLeverage);
       }
