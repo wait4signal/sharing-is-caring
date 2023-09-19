@@ -61,6 +61,7 @@ input bool     COPY_BUY = true;
 input bool     COPY_SELL = true;
 input ENUM_LOT_SIZE   LOT_SIZE = PROPORTIONAL_TO_BALANCE;
 input bool     USE_LEVERAGE_FOR_LOT_CALCULATION = true;
+input double   PROVIDER_BALANCE_FOR_LOT_CALC = 0.00;
 input double   MIN_AVALABLE_FUNDS_PERC = 0.20;
 input string   EXCLUDE_TICKETS = "";
 input string   INSTRUMENT_MATCH = "";
@@ -447,6 +448,10 @@ bool readPositions() {
    prTimeGMT = accountDataArray[2]; 
    prAccountNumber = accountDataArray[3]; 
    prAccountBalance = accountDataArray[4]; 
+   if(PROVIDER_BALANCE_FOR_LOT_CALC > 0.00) {
+      //Ignore provider balance and use configured fixed value instead 
+      prAccountBalance = PROVIDER_BALANCE_FOR_LOT_CALC;
+   }
    prAccountEquity = accountDataArray[5]; 
    prAccountCurrency = accountDataArray[6];
    prAccountLeverage = accountDataArray[7];
@@ -458,9 +463,8 @@ bool readPositions() {
    ArrayResize(prRecords,prRecordCount);
    
    int i = 0;
-   while(!FileIsEnding(positionsFileHandle)){
+   while(!FileIsEnding(positionsFileHandle) && i < prRecordCount){
       string line = FileReadString(positionsFileHandle);
-      //TODO: split string and add struct into array
       string tmpArray[12];
       StringSplit(line, ',', tmpArray);
       
