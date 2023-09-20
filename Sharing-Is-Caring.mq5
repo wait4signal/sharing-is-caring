@@ -54,12 +54,12 @@ LOG_LEVEL                        //Sets log level: LOG_NONE  = 0; LOG_ERROR = 1;
 //--- input parameters
 input ENUM_COPY_MODE COPY_MODE = RECEIVER; // Operating mode
 input int PROCESSING_INTERVAL_MS = 500;    // Processing interval (ms)
-input group "Monitoring";
+input group "  ----  Monitoring  ----";
 input string HEARTBEAT_URL = "";            // Heart beat URL
 input ulong HEARTBEAT_INTERVAL_MINUTES = 5; // Heart beat interval (minutes)
-input group "Provider";
+input group "  ----  Provider  ----";
 input bool REMOTE_FTP_PUBLISH = false; // Publish to remote FTP
-input group "Receiver";
+input group "  ----  Receiver  ----";
 input ulong PROVIDER_ACCOUNT;                           // Provider account number
 input int PRICE_DEVIATION = 50;                         // Price deviation
 input bool COPY_IN_PROFIT = false;                      // Copy trades in profit
@@ -75,7 +75,7 @@ input string INSTRUMENT_MATCH = "";                     // Match instruments
 input bool ALERT_MULTIPLE_LOSERS_CLOSE = true;          // Alert email on multiple losing trades
 // input bool     COPY_SL=true;
 // input bool     COPY_TP=true;
-input group "Remote Copy";
+input group "  ----  Remote Copy  ----";
 input bool REMOTE_HTTP_DOWNLOAD = false; // Remote HTTP download
 input string REMOTE_FILE_URL = "";       // Remote file URL
 input string REMOTE_USERNAME = "";       // Remote user name
