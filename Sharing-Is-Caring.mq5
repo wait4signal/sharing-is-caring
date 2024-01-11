@@ -123,7 +123,9 @@ PositionData recPositions[];
 int OnInit() {
    //Input validations   
    if(RECEIVER == COPY_MODE && PROVIDER_ACCOUNT < 1000) {
-      printHelper(LOG_ERROR, "Provider Account is required and should be at least 4 digits long.");
+      string errorMsg = "Provider Account is required and should be at least 4 digits long.";
+      MessageBox(errorMsg, "Error: Provider Account Missing", MB_OK | MB_ICONERROR);
+      printHelper(LOG_ERROR, errorMsg);
       return(INIT_PARAMETERS_INCORRECT);
    }
    
